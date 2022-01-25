@@ -1,0 +1,10 @@
+# Editor files
+.vscode/
+
+# Python environments
+venv/
+
+# Animation files
+*.mp4
+*.csv
+*.xmas
