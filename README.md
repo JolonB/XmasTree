@@ -11,10 +11,26 @@ This project builds upon the work from the previous work in three keys ways:
 This readme is a work in progress.
 I will be adding rough notes as I go, and will tidy this up once I'm done.
 
-## Setting up virtual environment
+## Usage
+
+### Generating Animations
+
+Before you can run any of the Python scripts, you first need to set up your virtual environment.
 
 ```shell
 python3 -m venv venv
 . venv/bin/activate
 pip install -r requirements.txt
 ```
+
+#### From Videos
+
+TODO
+
+#### From Existing Animations
+
+TODO
+
+## Contributions
+
+This is a one-man job... for now.

@@ -4,11 +4,13 @@ import argparse
 import cv2
 import progressbar
 
+DOWNSCALE_DIM = 144
+
 # Parse arguments
 parser = argparse.ArgumentParser(description="Blur and compress a video and save it as an mp4.\nThis may give you better outputs than just using the original video because multiple pixels are blurred into one value.")
 parser.add_argument("video", help="The video file to use.", type=str)
 parser.add_argument("-o", "--output", help="The output file. Defaults to %(default)s", default="output.mp4", type=str)
-parser.add_argument("-d", "--downscale", help="Downscale the video by a factor of 2. Defaults to %(default)s", default=False, action="store_true")
+parser.add_argument("-d", "--downscale", help="Downscale the video so that the smallest dimesion is {} pixels. Defaults to %(default)s".format(DOWNSCALE_DIM), default=False, action="store_true")
 parser.add_argument("-i", "--intensity", help="The intensity of the blur. A larger number will take longer to process. Must be an odd number. Defaults to %(default)s", default=5, type=int)
 
 
@@ -28,11 +30,14 @@ def compress(video_file, output_file, downscale=False, intensity=5):
     # Get input video framerate
     frame_rate = int(cap.get(cv2.CAP_PROP_FPS))
 
-    # Reduce height and width by a factor of 2 unless either dimension becomes less than 144
-    if frame_width // 2 < 144 or frame_height // 2 < 144:
-        new_dimensions = (frame_width, frame_height)
+    # Downscale dimensions, if requested
+    smallest_side = min(frame_width, frame_height)
+    if downscale:
+        # Downscale factor should not upscale the video if it is already smaller than DOWNSCALE_DIM pixels
+        downscale_factor = min(1, DOWNSCALE_DIM/smallest_side)
     else:
-        new_dimensions = (frame_width // 2, frame_height // 2)
+        downscale_factor = 1
+    new_dimensions = (int(frame_width * downscale_factor), int(frame_height * downscale_factor))
     # Open output file
     out = cv2.VideoWriter(output_file, cv2.VideoWriter_fourcc(*'mp4v'), frame_rate, new_dimensions)
 
