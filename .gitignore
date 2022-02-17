@@ -8,3 +8,6 @@ venv/
 *.mp4
 *.csv
 *.xmas
+
+# Private files
+credentials.h

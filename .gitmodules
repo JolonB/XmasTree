@@ -1,0 +1,6 @@
+[submodule "asynchweb_test/lib/AsyncTCP"]
+	path = asynchweb_test/lib/AsyncTCP
+	url = https://github.com/me-no-dev/AsyncTCP.git
+[submodule "asynchweb_test/lib/ESPAsyncWebServer"]
+	path = asynchweb_test/lib/ESPAsyncWebServer
+	url = https://github.com/me-no-dev/ESPAsyncWebServer.git

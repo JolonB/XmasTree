@@ -27,6 +27,22 @@ pip install -r requirements.txt
 
 TODO
 
+### Building Controller Code
+
+The code has been built using the Arduino libraries and IDE, so I suggest using those.
+You will need to install the following libraries by downloading the linked .zip files and, in the Arduino IDE, going *Sketch > Include Library > Add ZIP Library...*
+
+- [FastLED 3.5.0](https://github.com/FastLED/FastLED/archive/refs/tags/3.5.0.zip)
+- [ESPAsyncWebServer](https://github.com/me-no-dev/ESPAsyncWebServer/archive/1d46269.zip)
+- [AsyncTCP](https://github.com/me-no-dev/AsyncTCP/archive/ca8ac5f.zip)
+
+You will also need to add the following board using Tools > Board > Boards Manager...
+The following link contains instructions for doing this.
+
+- [Arduino-ESP32](https://docs.espressif.com/projects/arduino-esp32/en/latest/installing.html#installing-using-boards-manager)
+
+<!-- TODO move to using platformio -->
+
 #### From Existing Animations
 
 TODO
