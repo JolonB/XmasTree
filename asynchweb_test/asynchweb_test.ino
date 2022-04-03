@@ -84,6 +84,8 @@ const char* password = CREDENTIALS_PRIVATE_PASSWORD;
 const char* DELETE_INPUT_FILE = "file";
 const char* ADD_INPUT_FILE = "file";
 const char* REMOVE_INPUT_FILE = "index";
+const char* MOVE_INPUT_FILE = "index";
+const char* MOVE_SHIFT = "shift";
 const char* UPLOAD_INPUT_FILENAME = "fname";
 
 const uint8_t SHORTNAME_LEN = 20;
@@ -91,6 +93,7 @@ const uint8_t SHORTNAME_LEN = 20;
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
 
+// Include the minified webui html file
 const char index_html[] PROGMEM =
 #include "webui.html.h"
 ;
@@ -106,7 +109,11 @@ String processor(const String& var){
             char* filename = animation.getFilename();
             animation.getShortFilename(SHORTNAME_LEN, shortname);
             bool corrupt = animation.isCorrupt();
-            html_msg = html_msg + "<div class=\"object clearfix" + (corrupt ? " corruptobj" : "") + "\"><span class=\"fname\">" + shortname + "</span><button class=\"delete\" onclick=\"deletef('" + filename + "')\"><i class=\"gg-trash\"></i></button>" + (corrupt ? "" : "<button class=\"add\" onclick=\"addf('"+String(filename)+"')\">+</button>") + "</div>";
+            html_msg = html_msg + "<div class=\"object clearfix" + (corrupt ? " corruptobj" : "") + "\">"
+                        "<span class=\"fname\">" + shortname + "</span>"
+                        "<button class=\"delete\" onclick=\"deletef('" + filename + "')\"><i class=\"gg-trash\"></i></button>"
+                         + (corrupt ? "" : "<button class=\"add\" onclick=\"addf('" + String(filename) + "')\">+</button>")
+                         + "</div>";
         }
     } else if (var == "ANIMATION_QUEUE_PLACEHOLDER") {
         for (int index = 0; index < queue.size(); index++) {
@@ -116,7 +123,12 @@ String processor(const String& var){
             bool corrupt = animation->isCorrupt();
             Serial.println(filename);
             Serial.println(corrupt);
-            html_msg = html_msg + "<div class=\"object clearfix" + (corrupt ? " corruptobj" : "") + "\"><span class=\"fname\">"+shortname+"</span><button class=\"remove\" onclick=\"removef("+index+")\">-</button></div>";
+            html_msg = html_msg + "<div class=\"object clearfix" + (corrupt ? " corruptobj" : "") + "\">"
+                        "<span class=\"fname\">" + shortname + "</span>"
+                        "<button class=\"remove\" onclick=\"removef(" + index + ")\">&#8722;</button>"
+                        "<button class=\"move\" onclick=\"movef(" + index + ",+1)\">&#9662;</button>"
+                        "<button class=\"move\" onclick=\"movef(" + index + ",-1)\">&#9652;</button>"
+                        "</div>";
         }
     }
     return html_msg;
@@ -215,6 +227,15 @@ void setup(){
         request->send_P(200, "text/html", index_html, processor);
     });
 
+    server.on("/add", HTTP_GET, [] (AsyncWebServerRequest *request) {
+        if (request->hasParam(ADD_INPUT_FILE)) {
+            const char* fileToAdd = (request->getParam(ADD_INPUT_FILE)->value()).c_str();
+            Serial.println(fileToAdd);
+            queue.push_back(&animation_files.at(fileToAdd));
+            request->send(200, "text/plain", "OK");
+        }
+    });
+
     server.on("/delete", HTTP_GET, [] (AsyncWebServerRequest *request) {
         if (request->hasParam(DELETE_INPUT_FILE)) {
             const char* fileToDelete = (request->getParam(DELETE_INPUT_FILE)->value()).c_str();
@@ -244,12 +265,29 @@ void setup(){
         }
     });
 
-    server.on("/add", HTTP_GET, [] (AsyncWebServerRequest *request) {
-        if (request->hasParam(ADD_INPUT_FILE)) {
-            const char* fileToAdd = (request->getParam(ADD_INPUT_FILE)->value()).c_str();
-            Serial.println(fileToAdd);
-            queue.push_back(&animation_files.at(fileToAdd));
-            request->send(200, "text/plain", "OK");
+    server.on("/move", HTTP_GET, [] (AsyncWebServerRequest *request) {
+        if (request->hasParam(MOVE_INPUT_FILE)) {
+          // Get the index to move
+          int indexToMove = (request->getParam(MOVE_INPUT_FILE)->value()).toInt();
+          // Get the number of indices to shift it by
+          int shift = (request->getParam(MOVE_SHIFT)->value()).toInt();
+          // Get the size of the vector, so we know when to wrap around
+          int queueSize = queue.size();
+          // Get the new index, accounting for the wrap around
+          int newIndex = ((indexToMove + shift) % queueSize + queueSize) % queueSize;
+
+          // Get the start and end iterators
+          auto iter = queue.begin();
+          auto fromIndex = iter + indexToMove;
+          auto toIndex = iter + newIndex;
+
+          // Move the element: https://stackoverflow.com/a/28846892/6366927
+          if (fromIndex < toIndex)
+            std::rotate(fromIndex, fromIndex + 1, toIndex + 1);
+          else if (fromIndex > toIndex)
+            std::rotate(toIndex, fromIndex, fromIndex + 1);
+            
+          request->send(200, "text/plain", "OK");
         }
     });
 

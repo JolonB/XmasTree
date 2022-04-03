@@ -15,6 +15,7 @@
     button.delete{background-color:#ff7961}
     button.add{background-color:#60ad5e}
     button.remove{background-color:#ffb74d}
+    button.move{background-color:#dcdcdc}
     .gg-trash{box-sizing:border-box;position:relative;display:block;transform:scale(var(--ggs,1));width:10px;height:12px;border:2px solid transparent;box-shadow:0 0 0 2px,inset -2px 0 0,inset 2px 0 0;border-bottom-left-radius:1px;border-bottom-right-radius:1px;margin-top:4px}.gg-trash::after,.gg-trash::before{content:"";display:block;box-sizing:border-box;position:absolute}.gg-trash::after{background:currentColor;border-radius:3px;width:16px;height:2px;top:-4px;left:-5px}.gg-trash::before{width:10px;height:4px;border:2px solid;border-bottom:transparent;border-top-left-radius:2px;border-top-right-radius:2px;top:-7px;left:-2px}
   </style>
 </head>
@@ -33,21 +34,28 @@
   <div class="row">
     <input id="image-file" type="file" onchange="upload(this)" >
   </div>
-<script>function deletef(filename){
+<script>
+function addf(filename){
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", "/add?file="+filename, false);
+  xhr.send();
+  location.reload();
+}
+function deletef(filename){
   var xhr = new XMLHttpRequest();
   xhr.open("GET", "/delete?file="+filename, false);
   xhr.send();
   location.reload();
 }
+function movef(index, shift) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", "/move?index="+index+"&shift="+shift, false);
+    xhr.send();
+    location.reload();
+}
 function removef(index){
   var xhr = new XMLHttpRequest();
   xhr.open("GET", "/remove?index="+index, false);
-  xhr.send();
-  location.reload();
-}
-function addf(filename){
-  var xhr = new XMLHttpRequest();
-  xhr.open("GET", "/add?file="+filename, false);
   xhr.send();
   location.reload();
 }

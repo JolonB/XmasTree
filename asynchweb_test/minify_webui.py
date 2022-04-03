@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import minify_html
 
 def main(infile, outfile):
