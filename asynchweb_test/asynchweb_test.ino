@@ -7,43 +7,51 @@
 #include <vector>
 #include <utility>
 #include <string>
+#include <cstdlib>
+#include <ctime>
 #include "credentials.h"
 
 #define ROOT_PATH "/animation/%s"
 
-class AnimationFile : public Printable {
-    public:
-        AnimationFile(const char*);
-        char* getFilename(void);
-        bool isCorrupt(void);
-        bool setFilename(const char*);
-        void setCorrupt(void);
-        size_t printTo(Print&) const;
-        char* getShortFilename(int, char*);
+class AnimationFile : public Printable
+{
+public:
+    AnimationFile(const char *);
+    char *getFilename(void);
+    bool isCorrupt(void);
+    bool setFilename(const char *);
+    void setCorrupt(void);
+    size_t printTo(Print &) const;
+    char *getShortFilename(int, char *);
 
-    private:
-        char filename[64];
-        bool corrupt = false;
+private:
+    char filename[64];
+    bool corrupt = false;
 };
 
-AnimationFile::AnimationFile(const char* filename) {
+AnimationFile::AnimationFile(const char *filename)
+{
     setFilename(filename);
 }
 
-char* AnimationFile::getFilename(void) {
+char *AnimationFile::getFilename(void)
+{
     return filename;
 }
 
-char* AnimationFile::getShortFilename(int maxLength, char* out) {
+char *AnimationFile::getShortFilename(int maxLength, char *out)
+{
     bool toStrip = strlen(filename) > maxLength;
     int i = 0;
     int newMax = (toStrip ? maxLength - 3 : maxLength);
-    while (filename[i] != '\0' && i < newMax) {
+    while (filename[i] != '\0' && i < newMax)
+    {
         out[i] = filename[i];
         i++;
     }
     // Add ellipsis if the filename is too long
-    if (toStrip) {
+    if (toStrip)
+    {
         out[i++] = '.';
         out[i++] = '.';
         out[i++] = '.';
@@ -52,41 +60,59 @@ char* AnimationFile::getShortFilename(int maxLength, char* out) {
     return out;
 }
 
-bool AnimationFile::isCorrupt(void) {
+bool AnimationFile::isCorrupt(void)
+{
     return corrupt;
 }
 
-bool AnimationFile::setFilename(const char* filename) {
+bool AnimationFile::setFilename(const char *filename)
+{
     // Check that the filename isn't too long
-    if (strlen(filename) > 64) {
+    if (strlen(filename) > 64)
+    {
         return false;
     }
     strcpy(this->filename, filename);
     return true;
 }
 
-void AnimationFile::setCorrupt(void) {
+void AnimationFile::setCorrupt(void)
+{
     corrupt = true;
 }
 
-size_t AnimationFile::printTo(Print& p) const {
+size_t AnimationFile::printTo(Print &p) const
+{
     return p.print(filename);
 }
 
 std::map<std::string, AnimationFile> animation_files;
-std::vector<AnimationFile*> queue;
+std::vector<AnimationFile *> queue;
+
+size_t active_index = 1;
+std::vector<int> playback_queue;
+enum Ordering
+{
+    IN_ORDER = 0,
+    SHUFFLE = 1,
+    RANDOM = 2
+};
+Ordering sequence = IN_ORDER;
+
+bool running_p = false; // false=pause, true=play
 
 // Replace with your network credentials
-const char* ssid = CREDENTIALS_PRIVATE_SSID;
-const char* password = CREDENTIALS_PRIVATE_PASSWORD;
+const char *ssid = CREDENTIALS_PRIVATE_SSID;
+const char *password = CREDENTIALS_PRIVATE_PASSWORD;
 
 // These must be the same as the values in the Javascript code
-const char* DELETE_INPUT_FILE = "file";
-const char* ADD_INPUT_FILE = "file";
-const char* REMOVE_INPUT_FILE = "index";
-const char* MOVE_INPUT_FILE = "index";
-const char* MOVE_SHIFT = "shift";
-const char* UPLOAD_INPUT_FILENAME = "fname";
+const char *DELETE_INPUT_FILE = "file";
+const char *ADD_INPUT_FILE = "file";
+const char *REMOVE_INPUT_FILE = "index";
+const char *MOVE_INPUT_FILE = "index";
+const char *MOVE_SHIFT = "shift";
+const char *SHIFT_VALUE = "by";
+const char *UPLOAD_INPUT_FILENAME = "fname";
 
 const uint8_t SHORTNAME_LEN = 20;
 
@@ -96,97 +122,119 @@ AsyncWebServer server(80);
 // Include the minified webui html file
 const char index_html[] PROGMEM =
 #include "webui.html.h"
-;
+    ;
 
 // Replaces placeholder with button section in your web page
-String processor(const String& var){
-    //Serial.println(var);
+String processor(const String &var)
+{
+    // Serial.println(var);
     String html_msg = "";
-    if (var == "ANIMATION_LIST_PLACEHOLDER") {
-        for (auto const& keyvalue : animation_files) {
+    if (var == "ANIMATION_LIST_PLACEHOLDER")
+    {
+        for (auto const &keyvalue : animation_files)
+        {
             AnimationFile animation = keyvalue.second;
-            char shortname[SHORTNAME_LEN+1];
-            char* filename = animation.getFilename();
+            char shortname[SHORTNAME_LEN + 1];
+            char *filename = animation.getFilename();
             animation.getShortFilename(SHORTNAME_LEN, shortname);
             bool corrupt = animation.isCorrupt();
             html_msg = html_msg + "<div class=\"object clearfix" + (corrupt ? " corruptobj" : "") + "\">"
-                        "<span class=\"fname\">" + shortname + "</span>"
-                        "<button class=\"delete\" onclick=\"deletef('" + filename + "')\"><i class=\"gg-trash\"></i></button>"
-                         + (corrupt ? "" : "<button class=\"add\" onclick=\"addf('" + String(filename) + "')\">+</button>")
-                         + "</div>";
+                                                                                                    "<span class=\"fname\">" +
+                       shortname + "</span>"
+                                   "<button class=\"delete\" onclick=\"deletef('" +
+                       filename + "')\"><i class=\"gg-trash\"></i></button>" + (corrupt ? "" : "<button class=\"add\" onclick=\"addf('" + String(filename) + "')\">+</button>") + "</div>";
         }
-    } else if (var == "ANIMATION_QUEUE_PLACEHOLDER") {
-        for (int index = 0; index < queue.size(); index++) {
+    }
+    else if (var == "ANIMATION_QUEUE_PLACEHOLDER")
+    {
+        for (int index = 0; index < queue.size(); index++)
+        {
             AnimationFile *animation = queue[index];
-            char shortname[SHORTNAME_LEN+1];
-            char* filename = animation->getShortFilename(SHORTNAME_LEN, shortname);
+            char shortname[SHORTNAME_LEN + 1];
+            char *filename = animation->getShortFilename(SHORTNAME_LEN, shortname);
             bool corrupt = animation->isCorrupt();
             Serial.println(filename);
             Serial.println(corrupt);
             html_msg = html_msg + "<div class=\"object clearfix" + (corrupt ? " corruptobj" : "") + "\">"
-                        "<span class=\"fname\">" + shortname + "</span>"
-                        "<button class=\"remove\" onclick=\"removef(" + index + ")\">&#8722;</button>"
-                        "<button class=\"move\" onclick=\"movef(" + index + ",+1)\">&#9662;</button>"
-                        "<button class=\"move\" onclick=\"movef(" + index + ",-1)\">&#9652;</button>"
-                        "</div>";
+                                                                                                    "<span class=\"fname\">" +
+                       (index == active_index ? "&#9656; " : "") + shortname + "</span>"
+                                                                               "<button class=\"remove\" onclick=\"removef(" +
+                       index + ")\">&#8722;</button>"
+                               "<button class=\"move\" onclick=\"movef(" +
+                       index + ",+1)\">&#9662;</button>"
+                               "<button class=\"move\" onclick=\"movef(" +
+                       index + ",-1)\">&#9652;</button>"
+                               "</div>";
         }
     }
     return html_msg;
 }
 
 // Stolen from esp_xmas_tree.ino (changed FILE_READ to FILE_WRITE)
-bool init_file(fs::FS &fs, fs::File& input_file, const char* filename) {
-  // Close the file
-  if (input_file) {
-    input_file.close();
-  }
+bool init_file(fs::FS &fs, fs::File &input_file, const char *filename)
+{
+    // Close the file
+    if (input_file)
+    {
+        input_file.close();
+    }
 
-  input_file = fs.open(filename, FILE_WRITE);
+    input_file = fs.open(filename, FILE_WRITE);
 
-  if (!input_file) {
-    Serial.write("Error: Could not open file \"");
-    Serial.write(filename);
-    Serial.write("\"\n");
-    return false;
-  }
+    if (!input_file)
+    {
+        Serial.write("Error: Could not open file \"");
+        Serial.write(filename);
+        Serial.write("\"\n");
+        return false;
+    }
 
-  return true;
+    return true;
 }
 
-bool write_to_file(fs::File& input_file, const char* data) {
-  if (!input_file) {
-    Serial.write("Error: File not available\n");
-    return false;
-  }
+bool write_to_file(fs::File &input_file, const char *data)
+{
+    if (!input_file)
+    {
+        Serial.write("Error: File not available\n");
+        return false;
+    }
 
-  input_file.print(data);
-  return true;
+    input_file.print(data);
+    return true;
 }
 
-bool write_to_file(fs::File& input_file, const uint8_t* data, size_t len) {
-  if (!input_file) {
-    Serial.write("Error: File not available\n");
-    return false;
-  }
+bool write_to_file(fs::File &input_file, const uint8_t *data, size_t len)
+{
+    if (!input_file)
+    {
+        Serial.write("Error: File not available\n");
+        return false;
+    }
 
-  input_file.write(data, len);
-  return true;
+    input_file.write(data, len);
+    return true;
 }
 
-void setup(){
+void setup()
+{
     // Serial port for debugging purposes
     Serial.begin(115200);
+
+    srand(time(NULL));
 
     Serial.println("Just started");
 
     // SD card for writing/reading files
-    if (!SD_MMC.begin()) {
+    if (!SD_MMC.begin())
+    {
         Serial.println("Error: SD_MMC.begin() failed");
         return;
     }
 
     uint8_t card_type = SD_MMC.cardType();
-    if (card_type == CARD_NONE) {
+    if (card_type == CARD_NONE)
+    {
         Serial.println("Error: No SD card attached");
         return;
     }
@@ -208,12 +256,13 @@ void setup(){
     queue.push_back(&animation_files.at("hello.txt"));
     queue.push_back(&animation_files.at("corrupt.txt"));
     animation_files.at("corrupt.txt").setCorrupt();
-    
+
     // Connect to Wi-Fi
     WiFi.begin(ssid, password);
 
     Serial.println("Checking wifi status");
-    while (WiFi.status() != WL_CONNECTED) {
+    while (WiFi.status() != WL_CONNECTED)
+    {
         delay(1000);
         Serial.println("Connecting to WiFi..");
     }
@@ -223,20 +272,20 @@ void setup(){
     Serial.println(WiFi.localIP());
 
     // Route for root / web page
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-        request->send_P(200, "text/html", index_html, processor);
-    });
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+              { request->send_P(200, "text/html", index_html, processor); });
 
-    server.on("/add", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    server.on("/add", HTTP_GET, [](AsyncWebServerRequest *request)
+              {
         if (request->hasParam(ADD_INPUT_FILE)) {
             const char* fileToAdd = (request->getParam(ADD_INPUT_FILE)->value()).c_str();
             Serial.println(fileToAdd);
             queue.push_back(&animation_files.at(fileToAdd));
             request->send(200, "text/plain", "OK");
-        }
-    });
+        } });
 
-    server.on("/delete", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    server.on("/delete", HTTP_GET, [](AsyncWebServerRequest *request)
+              {
         if (request->hasParam(DELETE_INPUT_FILE)) {
             const char* fileToDelete = (request->getParam(DELETE_INPUT_FILE)->value()).c_str();
             Serial.println(fileToDelete);
@@ -248,10 +297,10 @@ void setup(){
             }), queue.end());
             
             request->send(200, "text/plain", "OK");
-        }
-    });
+        } });
 
-    server.on("/remove", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    server.on("/remove", HTTP_GET, [](AsyncWebServerRequest *request)
+              {
         if (request->hasParam(REMOVE_INPUT_FILE)) {
             int indexToRemove = (request->getParam(REMOVE_INPUT_FILE)->value()).toInt();
             Serial.println(indexToRemove);
@@ -262,10 +311,10 @@ void setup(){
             queue.erase(queue.begin() + indexToRemove);
             
             request->send(200, "text/plain", "OK");
-        }
-    });
+        } });
 
-    server.on("/move", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    server.on("/move", HTTP_GET, [](AsyncWebServerRequest *request)
+              {
         if (request->hasParam(MOVE_INPUT_FILE)) {
           // Get the index to move
           int indexToMove = (request->getParam(MOVE_INPUT_FILE)->value()).toInt();
@@ -288,10 +337,71 @@ void setup(){
             std::rotate(toIndex, fromIndex, fromIndex + 1);
             
           request->send(200, "text/plain", "OK");
-        }
-    });
+        } });
 
-    server.on("/upload", HTTP_POST, [](AsyncWebServerRequest * request){}, NULL, [] (AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+    server.on("/shift", HTTP_GET, [](AsyncWebServerRequest *request)
+              {
+        if (request->hasParam(SHIFT_VALUE)) {
+            int shiftBy = (request->getParam(SHIFT_VALUE)->value()).toInt();
+
+            // Get current size of queue to determine which index to go to
+            size_t pb_queue_size = playback_queue.size();
+            switch (sequence) {
+                case IN_ORDER:
+                    if (shiftBy > 0) {
+                        active_index++;
+                        // Wrap around to start
+                        if (active_index >= pb_queue_size)
+                            active_index = 0;
+                    }
+                    else if (shiftBy < 0) {
+                        active_index--;
+                        // Wrap around to end
+                        if (active_index < 0)
+                            active_index = pb_queue_size - 1;
+                    }
+                    else {
+                        Serial.println("Invalid shift when choosing next/prev animation");
+                        exit(0);
+                    }
+                    break;
+                case SHUFFLE:
+                    // TODO
+                    break;
+                case RANDOM:
+                    // Generate a random number equal to 1 less than the queue size,
+                    // so we don't play the same animation twice
+                    if (pb_queue_size > 1) {
+                        size_t tmp_index = rand() % (pb_queue_size - 1);
+                        // Shift indices once we pass the active index
+                        if (tmp_index >= active_index) tmp_index++;
+                        // Set the active index to the random index
+                        active_index = tmp_index;
+                    }
+                    else if (pb_queue_size == 1)
+                        active_index = 0;
+                    else
+                        active_index = -1;
+                        
+                    break;
+                default:
+                    Serial.println("sequence value is invalid");
+                    exit(0);
+            }
+
+          request->send(200, "text/plain", "OK");
+        } });
+
+    server.on("/togglepp", HTTP_GET, [](AsyncWebServerRequest * request)
+    {
+        running_p = !running_p;
+
+        request->send(200, "text/plain", "OK");
+    }); // TODO maybe have a GET for running status, which can be called whenever the page refreshes
+
+    server.on(
+        "/upload", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+        {
         // Get the filename
         const char *upload_filename = request->getParam(UPLOAD_INPUT_FILENAME)->value().c_str();
         // Open file
@@ -315,13 +425,12 @@ void setup(){
             Serial.println("Done uploading");
 
         // Close file
-        file.close();
-    });
+        file.close(); });
 
     // Start server
     server.begin();
 }
 
-void loop() {
-
+void loop()
+{
 }
