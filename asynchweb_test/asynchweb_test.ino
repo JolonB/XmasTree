@@ -138,10 +138,10 @@ String processor(const String &var)
             char *filename = animation.getFilename();
             animation.getShortFilename(SHORTNAME_LEN, shortname);
             bool corrupt = animation.isCorrupt();
-            html_msg = html_msg + "<div class=\"object clearfix" + (corrupt ? " corruptobj" : "") + "\">"
-                                                                                                    "<span class=\"fname\">" +
-                       shortname + "</span>"
-                                   "<button class=\"delete\" onclick=\"deletef('" +
+            html_msg = html_msg + "<div class=\"object clearfix" + (corrupt ? " corruptobj" : "") + "\">" +
+                       "<abbr class=\"fname\" title=\"" + filename + "\">" +
+                       shortname + "</abbr>" +
+                       "<button class=\"delete\" onclick=\"deletef('" +
                        filename + "')\"><i class=\"gg-trash\"></i></button>" + (corrupt ? "" : "<button class=\"add\" onclick=\"addf('" + String(filename) + "')\">+</button>") + "</div>";
         }
     }
@@ -155,16 +155,16 @@ String processor(const String &var)
             bool corrupt = animation->isCorrupt();
             Serial.println(filename);
             Serial.println(corrupt);
-            html_msg = html_msg + "<div class=\"object clearfix" + (corrupt ? " corruptobj" : "") + "\">"
-                                                                                                    "<span class=\"fname\">" +
-                       (index == active_index ? "&#9656; " : "") + shortname + "</span>"
-                                                                               "<button class=\"remove\" onclick=\"removef(" +
-                       index + ")\">&#8722;</button>"
-                               "<button class=\"move\" onclick=\"movef(" +
-                       index + ",+1)\">&#9662;</button>"
-                               "<button class=\"move\" onclick=\"movef(" +
-                       index + ",-1)\">&#9652;</button>"
-                               "</div>";
+            html_msg = html_msg + "<div class=\"object clearfix" + (corrupt ? " corruptobj" : "") + "\">" +
+                       "<abbr class=\"fname\" title=\"" + filename + "\">" +
+                       (index == active_index ? "&#9656; " : "") + shortname + "</abbr>" +
+                       "<button class=\"remove\" onclick=\"removef(" +
+                       index + ")\">&#8722;</button>" +
+                       "<button class=\"move\" onclick=\"movef(" +
+                       index + ",+1)\">&#9662;</button>" +
+                       "<button class=\"move\" onclick=\"movef(" +
+                       index + ",-1)\">&#9652;</button>" +
+                       "</div>";
         }
     }
     return html_msg;
@@ -345,59 +345,58 @@ void setup()
             int shiftBy = (request->getParam(SHIFT_VALUE)->value()).toInt();
 
             // Get current size of queue to determine which index to go to
-            size_t pb_queue_size = playback_queue.size();
-            switch (sequence) {
-                case IN_ORDER:
-                    if (shiftBy > 0) {
-                        active_index++;
-                        // Wrap around to start
-                        if (active_index >= pb_queue_size)
-                            active_index = 0;
-                    }
-                    else if (shiftBy < 0) {
-                        active_index--;
-                        // Wrap around to end
-                        if (active_index < 0)
-                            active_index = pb_queue_size - 1;
-                    }
-                    else {
-                        Serial.println("Invalid shift when choosing next/prev animation");
-                        exit(0);
-                    }
-                    break;
-                case SHUFFLE:
-                    // TODO
-                    break;
-                case RANDOM:
-                    // Generate a random number equal to 1 less than the queue size,
-                    // so we don't play the same animation twice
-                    if (pb_queue_size > 1) {
-                        size_t tmp_index = rand() % (pb_queue_size - 1);
-                        // Shift indices once we pass the active index
-                        if (tmp_index >= active_index) tmp_index++;
-                        // Set the active index to the random index
-                        active_index = tmp_index;
-                    }
-                    else if (pb_queue_size == 1)
+            size_t queue_size = queue.size();
+            if (sequence == IN_ORDER || sequence == SHUFFLE) {
+                if (shiftBy > 0) {
+                    active_index++;
+                    // Wrap around to start
+                    if (active_index >= queue_size)
                         active_index = 0;
-                    else
-                        active_index = -1;
-                        
-                    break;
-                default:
-                    Serial.println("sequence value is invalid");
+                }
+                else if (shiftBy < 0) {
+                    active_index--;
+                    // Wrap around to end
+                    if (active_index < 0)
+                        active_index = queue_size - 1;
+                }
+                else {
+                    Serial.println("Invalid shift when choosing next/prev animation");
                     exit(0);
+                }
+            } else if (sequence == RANDOM) {
+                // Generate a random number equal to 1 less than the queue size,
+                // so we don't play the same animation twice
+                if (queue_size > 1) {
+                    size_t tmp_index = rand() % (queue_size - 1);
+                    // Shift indices once we pass the active index
+                    if (tmp_index >= active_index) tmp_index++;
+                    // Set the active index to the random index
+                    active_index = tmp_index;
+                }
+                else if (queue_size == 1)
+                    active_index = 0;
+                else
+                    active_index = -1;
+                        
+            } else {
+                Serial.println("`sequence` value is invalid");
+                exit(0);
             }
 
           request->send(200, "text/plain", "OK");
         } });
 
-    server.on("/togglepp", HTTP_GET, [](AsyncWebServerRequest * request)
-    {
+    server.on("/togglepp", HTTP_GET, [](AsyncWebServerRequest *request)
+              {
         running_p = !running_p;
 
-        request->send(200, "text/plain", "OK");
-    }); // TODO maybe have a GET for running status, which can be called whenever the page refreshes
+        request->send(200, "text/plain", "OK"); }); // TODO maybe have a GET for running status, which can be called whenever the page refreshes
+
+    server.on("/status/play", HTTP_GET, [](AsyncWebServerRequest *request)
+              {
+            char msg[2]; // running_p is bool, so is only ever 0 or 1
+            sprintf(msg, "%d", running_p);
+            request->send(200, "text/plain", msg); });
 
     server.on(
         "/upload", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)

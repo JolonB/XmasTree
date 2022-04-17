@@ -3,7 +3,7 @@
 
 <head>
   <title>Xmas Tree Control Panel</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- <meta name="viewport" content="width=device-width, initial-scale=1"> -->
   <link rel="icon" href="data:,">
   <style>
     body {
@@ -29,6 +29,16 @@
       margin: 5%
     }
 
+    @media screen and (max-width: 1000px) {
+      .row {
+        margin: 0;
+      }
+
+      .col {
+        width: 100%;
+      }
+    }
+
     .object {
       background-color: #a4a4a4;
       padding: 10px;
@@ -48,7 +58,7 @@
       display: table
     }
 
-    span.fname {
+    abbr.fname {
       float: left;
       top: 50%;
       transform: translateY(-50%);
@@ -60,6 +70,14 @@
       padding: 10px;
       margin: 0;
       float: right
+    }
+
+    .center {
+      margin: auto;
+    }
+
+    abbr {
+      text-decoration: none;
     }
 
     button.delete {
@@ -144,7 +162,7 @@
   </style>
 </head>
 
-<body>
+<body onload="f_onload()">
   <h2>Christmas Tree Animations</h2>
   <div class="row">
     <div class="col">
@@ -154,30 +172,52 @@
     <div class="col">
       <h2>Queue</h2>
       %ANIMATION_QUEUE_PLACEHOLDER%
-
-
-      <button class="add" onclick="shiftq(-1)">PREV</button>
-      <button class="remove" onclick="playpause()">PAUSE</button>
-      <button class="add" onclick="shiftq(+1)">NEXT</button>
-
-      <div class="switch-toggle switch-3 switch-candy">
-        <input id="on" name="state-d" type="radio" checked="checked" />
-        <label for="on" onclick="">IN ORDER</label>
-
-        <input id="na" name="state-d" type="radio" />
-        <label for="na" onclick="">SHUFFLE</label>
-
-        <input id="off" name="state-d" type="radio" />
-        <label for="off" onclick="">RANDOM</label>
-
-        <a></a>
-      </div>
     </div>
   </div>
   <div class="row">
-    <input id="image-file" type="file" onchange="upload(this)">
+    <div class="col">
+      <input id="image-file" type="file" onchange="upload(this)">
+    </div>
+    <div class="col">
+      <div class="row">
+        <span class="center">
+          <button class="add" id="pr" onclick="shiftq(-1)">PREV</button>
+          <button class="remove" id="pp" onclick="playpause()">-</button>
+          <button class="add" id="nx" onclick="shiftq(+1)">NEXT</button>
+        </span>
+
+      </div>
+      <br>
+      <div class="row">
+        <div class="center switch-toggle switch-3 switch-candy">
+          <input id="on" name="state-d" type="radio" checked="checked" />
+          <label for="on" onclick="">IN ORDER</label>
+
+          <input id="na" name="state-d" type="radio" />
+          <label for="na" onclick="">SHUFFLE</label>
+
+          <input id="off" name="state-d" type="radio" />
+          <label for="off" onclick=""><abbr title="teategwebgwev">RANDOM</abbr></label>
+
+          <a></a>
+        </div>
+      </div>
+
+    </div>
   </div>
   <script>
+    function f_onload() {
+      var xhr = new XMLHttpRequest();
+      xhr.open("GET", "/status/play", true);
+      xhr.onreadystatechange = function () {
+        if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
+          var response = parseInt(this.response);
+          document.getElementById("pp").innerHTML = (response ? "PAUSE" : "PLAY");
+        }
+      }
+      xhr.send();
+    }
+
     function send_req(req_method, data) {
       var xhr = new XMLHttpRequest();
       xhr.open(req_method, data, false);
