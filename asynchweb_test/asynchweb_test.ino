@@ -151,7 +151,8 @@ String processor(const String &var)
         {
             AnimationFile *animation = queue[index];
             char shortname[SHORTNAME_LEN + 1];
-            char *filename = animation->getShortFilename(SHORTNAME_LEN, shortname);
+            char *filename = animation->getFilename();
+            animation->getShortFilename(SHORTNAME_LEN, shortname);
             bool corrupt = animation->isCorrupt();
             Serial.println(filename);
             Serial.println(corrupt);
@@ -240,6 +241,39 @@ void setup()
     }
 
     Serial.println("Starting up...");
+
+    // Read filenames from SD card in /animations directory
+    fs::FS &fs = SD_MMC;
+    fs::File dir = fs.open("/animations", FILE_READ);
+    if (!dir)
+    {
+        Serial.println("Error: Could not open directory");
+        return;
+    }
+    // Read each filename in dir
+    while (true)
+    {
+        File entry = dir.openNextFile();
+        if (!entry)
+        {
+            break;
+        }
+        if (!entry.isDirectory())
+        {
+            // Get last occurance of / in entry.name
+            const char * entry_name = entry.name();
+            const char *filename = strrchr(entry_name, '/');
+            if (!filename) {
+                // No / found, use entry.name
+                filename = entry_name;
+            } else {
+                // Skip the /
+                filename++;
+            }
+            AnimationFile animation(filename);
+            animation_files.emplace(std::make_pair(animation.getFilename(), animation));
+        }
+    }
 
     AnimationFile hello = AnimationFile("hello.txt");
     AnimationFile world = AnimationFile("world.txt");
