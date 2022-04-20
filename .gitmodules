@@ -4,3 +4,9 @@
 [submodule "asynchweb_test/lib/ESPAsyncWebServer"]
 	path = asynchweb_test/lib/ESPAsyncWebServer
 	url = https://github.com/me-no-dev/ESPAsyncWebServer.git
+[submodule "async_xmas_tree/lib/AsyncTCP"]
+	path = async_xmas_tree/lib/AsyncTCP
+	url = https://github.com/me-no-dev/AsyncTCP.git
+[submodule "async_xmas_tree/lib/ESPAsyncWebServer"]
+	path = async_xmas_tree/lib/ESPAsyncWebServer
+	url = https://github.com/me-no-dev/ESPAsyncWebServer.git
