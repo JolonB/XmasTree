@@ -1,0 +1,6 @@
+{
+    "ip_addr": "192.168.0.25",
+    "num_leds": 20,
+    "max_current_ma": 500,
+    "default_fps": 20
+}

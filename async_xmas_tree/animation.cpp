@@ -18,18 +18,33 @@ char *AnimationFile::getShortFilename(const int maxLength, char *out) {
   return out;
 }
 
-bool AnimationFile::setFilename(const char *filename) {
+bool AnimationFile::setFilepath(const char *filepath) {
   // Check that the filename isn't too long
-  if (strlen(filename) > 64) {
+  if (strlen(filepath) > MAX_PATH_LENGTH) {
     return false;
   }
+
+  // Get last occurance of / in entry.name
+  const char *filename = strrchr(filepath, '/');
+  if (!filename) {
+    // No / found, use entry.name
+    filename = filepath;
+  } else {
+    // Skip the /
+    filename++;
+  }
+
+  // Set the filepath and filename
+  strcpy(this->filepath, filepath);
   strcpy(this->filename, filename);
   return true;
 }
 
-AnimationFile::AnimationFile(const char *filename) { setFilename(filename); }
+AnimationFile::AnimationFile(const char *filename) { setFilepath(filename); }
 
 char *AnimationFile::getFilename(void) { return filename; }
+
+char *AnimationFile::getFilepath(void) { return filepath; }
 
 bool AnimationFile::isCorrupt(void) { return corrupt; }
 

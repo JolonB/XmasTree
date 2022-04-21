@@ -10,3 +10,6 @@
 [submodule "async_xmas_tree/lib/ESPAsyncWebServer"]
 	path = async_xmas_tree/lib/ESPAsyncWebServer
 	url = https://github.com/me-no-dev/ESPAsyncWebServer.git
+[submodule "async_xmas_tree/lib/ArduinoJson"]
+	path = async_xmas_tree/lib/ArduinoJson
+	url = https://github.com/bblanchon/ArduinoJson.git

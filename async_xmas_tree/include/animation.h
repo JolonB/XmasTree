@@ -6,6 +6,7 @@ class AnimationFile : public Printable {
 public:
   // Constant max_len value
   static const int MAX_LEN = 64;
+  static const int MAX_PATH_LENGTH = 256;
 
   AnimationFile(const char *filename);
   /**
@@ -17,6 +18,12 @@ public:
    * AnimationFile::MAX_LEN characters.
    */
   char *getFilename(void);
+  /**
+   * @brief Get the full path of the animation file.
+   * 
+   * @return char* 
+   */
+  char *getFilepath(void);
   /**
    * @brief Check whether the animation file is valid.
    *
@@ -34,13 +41,12 @@ public:
    * @return false: If the filename was longer than AnimationFile::MAX_LEN
    * characters.
    */
-  bool setFilename(const char *filename);
+  bool setFilepath(const char *filename);
   /**
    * @brief Set the animation file as corrupt/invalid.
    *
    */
   void setCorrupt(void);
-  size_t printTo(Print &) const;
   /**
    * @brief Get the shortened filename, with a maximum length provided by the
    * first parameter.
@@ -51,8 +57,10 @@ public:
    * as the value in out is exactly the same.
    */
   char *getShortFilename(const int maxLength, char *out);
+  size_t printTo(Print &) const;
 
 private:
   char filename[MAX_LEN + 1];
+  char filepath[MAX_PATH_LENGTH + 1];
   bool corrupt = false;
 };

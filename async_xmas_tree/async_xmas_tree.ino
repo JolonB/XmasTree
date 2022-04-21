@@ -13,7 +13,8 @@
 #include <utility>
 #include <vector>
 
-#define ROOT_PATH "/animation/%s"
+#define ROOT_DIR "/animations"
+#define ROOT_PATH ROOT_DIR "/%s"
 
 std::map<std::string, AnimationFile> animation_files;
 std::vector<AnimationFile *> queue;
@@ -137,6 +138,7 @@ void setup() {
   // Serial port for debugging purposes
   Serial.begin(115200);
 
+  // Initialise random number generator for random/shuffle function
   srand(time(NULL));
 
   Serial.println("Just started");
@@ -150,7 +152,7 @@ void setup() {
 
   // Read filenames from SD card in /animations directory
   fs::File dir;
-  if (!sdfile::open_directory("/animations", dir)) {
+  if (!sdfile::open_directory(ROOT_DIR, dir)) {
     return;
   }
 
@@ -161,43 +163,12 @@ void setup() {
       break;
     }
     if (!entry.isDirectory()) {
-      // Get last occurance of / in entry.name
-      const char *entry_name = entry.name();
-      const char *filename = strrchr(entry_name, '/');
-      if (!filename) {
-        // No / found, use entry.name
-        filename = entry_name;
-      } else {
-        // Skip the /
-        filename++;
-      }
-      AnimationFile animation(filename);
+      const char *filepath = entry.name();
+      AnimationFile animation(filepath);
       animation_files.emplace(
           std::make_pair(animation.getFilename(), animation));
     }
   }
-
-  AnimationFile hello = AnimationFile("hello.txt");
-  AnimationFile world = AnimationFile("world.txt");
-  AnimationFile corrupt = AnimationFile("corrupt.txt");
-  AnimationFile alphabet =
-      AnimationFile("abcdefghijklmnopqrstuvwxyz123456789.txt");
-  animation_files.emplace(
-      std::make_pair("hello.txt", AnimationFile("hello.txt")));
-  animation_files.emplace(
-      std::make_pair("world.txt", AnimationFile("world.txt")));
-  animation_files.emplace(
-      std::make_pair("corrupt.txt", AnimationFile("corrupt.txt")));
-  animation_files.emplace(
-      std::make_pair("abcdefghijklmnopqrstuvwxyz123456789.txt",
-                     AnimationFile("abcdefghijklmnopqrstuvwxyz123456789.txt")));
-  // Set corrupt.txt to corrupt
-  queue.push_back(&animation_files.at("hello.txt"));
-  queue.push_back(&animation_files.at("hello.txt"));
-  queue.push_back(&animation_files.at("world.txt"));
-  queue.push_back(&animation_files.at("hello.txt"));
-  queue.push_back(&animation_files.at("corrupt.txt"));
-  animation_files.at("corrupt.txt").setCorrupt();
 
   // Connect to Wi-Fi
   WiFi.begin(ssid, password);
@@ -221,7 +192,6 @@ void setup() {
     if (request->hasParam(ADD_INPUT_FILE)) {
       const char *fileToAdd =
           (request->getParam(ADD_INPUT_FILE)->value()).c_str();
-      Serial.println(fileToAdd);
       queue.push_back(&animation_files.at(fileToAdd));
       request->send(200, "text/plain", "OK");
     }
@@ -231,7 +201,6 @@ void setup() {
     if (request->hasParam(DELETE_INPUT_FILE)) {
       const char *fileToDelete =
           (request->getParam(DELETE_INPUT_FILE)->value()).c_str();
-      Serial.println(fileToDelete);
       animation_files.erase(fileToDelete);
 
       // Iterate over queue and remove file if filename matches fileToDelete (or
@@ -383,4 +352,7 @@ void setup() {
   server.begin();
 }
 
-void loop() {}
+void loop() {
+  // Serial.println("hello");
+  // delay(1000);
+}
