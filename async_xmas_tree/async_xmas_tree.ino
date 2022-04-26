@@ -1,5 +1,8 @@
 #include "credentials.h"
 #include "include/animation.h"
+#include "include/async_xmas_tree.h"
+#include "include/config_parser.h"
+#include "include/html_content.h"
 #include "include/sdfile.h"
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
@@ -39,61 +42,8 @@ const char *MOVE_SHIFT = "shift";
 const char *SHIFT_VALUE = "by";
 const char *UPLOAD_INPUT_FILENAME = "fname";
 
-const uint8_t SHORTNAME_LEN = 20;
-
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
-
-// Include the minified webui html file
-const char index_html[] PROGMEM =
-#include "webui.html.h"
-    ;
-
-// Replaces placeholder with button section in your web page
-String processor(const String &var) {
-  // Serial.println(var);
-  String html_msg = "";
-  if (var == "ANIMATION_LIST_PLACEHOLDER") {
-    for (auto const &keyvalue : animation_files) {
-      AnimationFile animation = keyvalue.second;
-      char shortname[SHORTNAME_LEN + 1];
-      char *filename = animation.getFilename();
-      animation.getShortFilename(SHORTNAME_LEN, shortname);
-      bool corrupt = animation.isCorrupt();
-      html_msg = html_msg + "<div class=\"object clearfix" +
-                 (corrupt ? " corruptobj" : "") + "\">" +
-                 "<abbr class=\"fname\" title=\"" + filename + "\">" +
-                 shortname + "</abbr>" +
-                 "<button class=\"delete\" onclick=\"deletef('" + filename +
-                 "')\"><i class=\"gg-trash\"></i></button>" +
-                 (corrupt ? ""
-                          : "<button class=\"add\" onclick=\"addf('" +
-                                String(filename) + "')\">+</button>") +
-                 "</div>";
-    }
-  } else if (var == "ANIMATION_QUEUE_PLACEHOLDER") {
-    for (int index = 0; index < queue.size(); index++) {
-      AnimationFile *animation = queue[index];
-      char shortname[SHORTNAME_LEN + 1];
-      char *filename = animation->getFilename();
-      animation->getShortFilename(SHORTNAME_LEN, shortname);
-      bool corrupt = animation->isCorrupt();
-      Serial.println(filename);
-      Serial.println(corrupt);
-      html_msg = html_msg + "<div class=\"object clearfix" +
-                 (corrupt ? " corruptobj" : "") + "\">" +
-                 "<abbr class=\"fname\" title=\"" + filename + "\">" +
-                 (index == active_index ? "&#9656; " : "") + shortname +
-                 "</abbr>" + "<button class=\"remove\" onclick=\"removef(" +
-                 index + ")\">&#8722;</button>" +
-                 "<button class=\"move\" onclick=\"movef(" + index +
-                 ",+1)\">&#9662;</button>" +
-                 "<button class=\"move\" onclick=\"movef(" + index +
-                 ",-1)\">&#9652;</button>" + "</div>";
-    }
-  }
-  return html_msg;
-}
 
 // Stolen from esp_xmas_tree.ino (changed FILE_READ to FILE_WRITE)
 bool init_file(fs::FS &fs, fs::File &input_file, const char *filename) {
@@ -142,6 +92,7 @@ void setup() {
   srand(time(NULL));
 
   Serial.println("Just started");
+  active_index = 1; // TODO move this elsewhere
 
   // Initialise the SD card
   if (sdfile::init_sd_card() == -1) {

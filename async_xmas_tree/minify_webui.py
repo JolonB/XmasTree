@@ -24,4 +24,4 @@ def main(infile, outfile):
         f_out.write(minified)
 
 if __name__ == "__main__":
-    main('webui.html', 'webui.html.h')
+    main('webui.html', 'include/webui.html.h')
